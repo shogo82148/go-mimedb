@@ -1,6 +1,8 @@
 package mimedb
 
 import (
+	"errors"
+	"fmt"
 	"mime"
 	"slices"
 	"sort"
@@ -8,6 +10,15 @@ import (
 )
 
 //go:generate go run internal/cmd/update/main.go
+
+// AddExtensionType is not supported by this package.
+// MIE type database is read-only.
+func AddExtensionType(ext, typ string) error {
+	if !strings.HasPrefix(ext, ".") {
+		return fmt.Errorf("mimedb: extension %q missing leading dot", ext)
+	}
+	return errors.New("mimedb: adding extension is not supported")
+}
 
 // TypeByExtension returns the MIME type associated with the file extension ext.
 // The extension ext should begin with a leading dot, as in ".html".
