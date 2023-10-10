@@ -27,6 +27,9 @@ func TestTypeByExtension(t *testing.T) {
 		{".wasm", "application/wasm"},
 		{".webp", "image/webp"},
 		{".xml", "text/xml; charset=utf-8"},
+
+		// Uppercase
+		{".PNG", "image/png"},
 	}
 
 	for _, test := range tests {
@@ -56,6 +59,8 @@ func TestExtensionsByType(t *testing.T) {
 		{"application/wasm", []string{".wasm"}},
 		{"image/webp", []string{".webp"}},
 		{"text/xml", []string{".xml"}},
+
+		{"TEXT/HTML; charset=utf8", []string{".htm", ".html", ".shtml"}},
 	}
 
 	for _, test := range tests {
