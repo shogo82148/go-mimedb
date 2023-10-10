@@ -68,17 +68,17 @@ func main() {
 	fmt.Fprintln(buf, "")
 
 	// format mimeTypes and mimeTypesLower
-	mimeTypes := make(map[string]string, len(db))
-	mimeTypesLower := make(map[string]string, len(db))
-	for _, k := range types {
-		v := db[k]
+	mimeTypes := make(map[string][]string, len(db))
+	mimeTypesLower := make(map[string][]string, len(db))
+	for k, v := range db {
 		typ := k
 		if v.Charset != "" {
 			typ += "; charset=" + v.Charset
 		}
 		for _, ext := range v.Extensions {
-			mimeTypes[ext] = typ
-			mimeTypesLower[strings.ToLower(ext)] = typ
+			lower := strings.ToLower(ext)
+			mimeTypes[ext] = append(mimeTypes[ext], typ)
+			mimeTypesLower[lower] = append(mimeTypesLower[lower], typ)
 		}
 	}
 
@@ -90,25 +90,89 @@ func main() {
 
 	fmt.Fprintln(buf, "var mimeTypes = map[string]string{")
 	for _, ext := range exts {
-		fmt.Fprintf(buf, "\t%q: %q,\n", "."+ext, mimeTypes[ext])
+		if len(mimeTypes[ext]) == 0 {
+			continue
+		} else if len(mimeTypes[ext]) == 1 {
+			fmt.Fprintf(buf, "\t%q: %q,\n", "."+ext, mimeTypes[ext][0])
+		} else {
+			fmt.Fprintf(buf, "\t%q: %q,\n", "."+ext, selectType(ext, mimeTypes[ext]))
+			//log.Printf("%s: %#v", ext, mimeTypes[ext])
+		}
 	}
 	fmt.Fprintln(buf, "}")
 	fmt.Fprintln(buf, "")
 
 	fmt.Fprintln(buf, "var mimeTypesLower = map[string]string{")
 	for _, ext := range exts {
-		fmt.Fprintf(buf, "\t%q: %q,\n", "."+strings.ToLower(ext), mimeTypesLower[strings.ToLower(ext)])
+		if len(mimeTypes[ext]) == 0 {
+			continue
+		} else if len(mimeTypes[ext]) == 1 {
+			fmt.Fprintf(buf, "\t%q: %q,\n", "."+ext, mimeTypes[ext][0])
+		} else {
+			fmt.Fprintf(buf, "\t%q: %q,\n", "."+ext, selectType(ext, mimeTypes[ext]))
+			//log.Printf("%s: %#v", ext, mimeTypes[ext])
+		}
 	}
 	fmt.Fprintln(buf, "}")
 
 	source, err := format.Source(buf.Bytes())
 	if err != nil {
+		log.Println(buf.String())
 		log.Fatal(err)
 	}
 
 	if err := os.WriteFile("mimedb_generated.go", source, 0644); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func selectType(ext string, types []string) string {
+	// special cases
+	switch ext {
+	case "mp3":
+		return "audio/mpeg"
+	case "xml":
+		return "application/xml"
+	case "wav":
+		return "audio/wav"
+	}
+
+	standardTypes := make([]string, 0, len(types))
+	for _, typ := range types {
+		if strings.Contains(typ, "/x-") {
+			// it's a vendor-specific type, skip it
+			continue
+		}
+		standardTypes = append(standardTypes, typ)
+	}
+	if len(standardTypes) == 1 {
+		return standardTypes[0]
+	}
+
+	specialTypes := make([]string, 0, len(types))
+	for _, typ := range types {
+		if strings.HasSuffix(typ, "+json") || strings.HasSuffix(typ, "+xml") {
+			specialTypes = append(specialTypes, typ)
+		}
+	}
+	if len(specialTypes) == 1 {
+		return specialTypes[0]
+	}
+
+	log.Println("warning: multiple types:", ext, types)
+
+	if len(specialTypes) > 1 {
+		slices.Sort(specialTypes)
+		return specialTypes[0]
+	}
+
+	if len(standardTypes) > 1 {
+		slices.Sort(standardTypes)
+		return standardTypes[0]
+	}
+
+	slices.Sort(types)
+	return types[0]
 }
 
 type release struct {
