@@ -9,8 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4.4.0
+      - uses: actions/setup-go@v4.3.0
         with:
           go-version: stable
 
@@ -18,4 +18,4 @@ jobs:
           go generate ./...
 
       - name: commit and create a pull request
-        uses: shogo82148/actions-commit-and-create-pr@v1
+        uses: shogo82148/actions-commit-and-create-pr@v1.1.4
